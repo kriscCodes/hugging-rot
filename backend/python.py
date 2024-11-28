@@ -1,34 +1,37 @@
-import transformers
 import torch
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-# Replace the model name with the one you've chosen
+# Model name from HuggingFace (pre-trained for sentiment analysis)
 model_name = 'distilbert-base-uncased-finetuned-sst-2-english'
 
-# Load the tokenizer
-tokenizer = DistilBertTokenizer.from_pretrained(model_name)
+# Initialize tokenizer and model
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+# Load model with memory optimizations:
+# - torch_dtype=torch.float16: Use 16-bit precision instead of 32-bit (saves memory)
+# - low_cpu_mem_usage=True: More memory-efficient loading
+model = AutoModelForSequenceClassification.from_pretrained(
+    model_name,
+    torch_dtype=torch.float16,
+    low_cpu_mem_usage=True
+)
 
-# Load the pre-trained and fine-tuned model
-model = DistilBertForSequenceClassification.from_pretrained(model_name)
-
-# Sample text
+# Example text to analyze
 text = "I absolutely hated the movie! It was terrible."
 
-# Tokenize the input text
-inputs = tokenizer(text, return_tensors='pt')  # 'pt' for PyTorch tensors
+# Convert text to model input format
+inputs = tokenizer(text, return_tensors='pt')
 
-# Get model outputs
-outputs = model(**inputs)
+# Make prediction
+# torch.no_grad() tells PyTorch not to track gradients (saves memory)
+with torch.no_grad():
+    outputs = model(**inputs)
 
-# Extract logits (raw predictions)
-logits = outputs.logits
+# Convert raw outputs to probabilities between 0 and 1
+probabilities = torch.softmax(outputs.logits, dim=1)
 
-# Convert logits to probabilities (optional)
-probabilities = torch.softmax(logits, dim=1)
-
-# Get the predicted class
+# Get the highest probability class
 predicted_class = torch.argmax(probabilities).item()
 
-# Map the predicted class to its label
+# Convert numeric prediction to text label
 labels = ['Negative', 'Positive']
 print(f"Predicted sentiment: {labels[predicted_class]}")
