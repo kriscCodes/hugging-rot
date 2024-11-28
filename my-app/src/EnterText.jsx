@@ -3,83 +3,93 @@ import axios from 'axios';
 import './EnterText.css';
 
 function EnterText() {
-  const [text, setText] = useState(''); // For current input
-  const [savedTexts, setSavedTexts] = useState([]); // For saved entries
-  const [analysisResults, setAnalysisResults] = useState([]); // For storing analysis results
+	const [text, setText] = useState(''); // For current input
+	const [savedTexts, setSavedTexts] = useState([]); // For saved entries
+	const [analysisResults, setAnalysisResults] = useState([]); // For storing analysis results
 
-  const handleSave = () => {
-    if (text.trim()) {
-      // Add the current text to the savedTexts array
-      setSavedTexts((prev) => [...prev, text]);
-      console.log(`Saved text${savedTexts.length + 1}:`, text); // Log with dynamic variable name
-      setText(''); // Clear the textbox after saving
-    }
-  };
+	// const handleSave = () => {
+	// 	if (text.trim()) {
+	// 		// Add the current text to the savedTexts array
+	// 		setSavedTexts((prev) => [...prev, text]);
+	// 		console.log(`Saved text${savedTexts.length + 1}:`, text); // Log with dynamic variable name
+	// 		setText(''); // Clear the textbox after saving
+	// 	}
+	// };
 
-  const handleAnalyze = async () => {
-    try {
-      const analysisPromises = savedTexts.map((savedText) =>
-        axios.post('http://localhost:8000/analyze', { text: savedText })
-      );
+	const handleAnalyze = async () => {
+		// Create new array with current texts plus new text (if any)
+		const textsToAnalyze = text.trim() 
+			? [...savedTexts, text] 
+			: savedTexts;
 
-      const responses = await Promise.all(analysisPromises);
+		if (text.trim()) {
+			setSavedTexts(textsToAnalyze);
+			setText(''); // Clear the textbox
+		}
 
-      // Collect and set the analysis results
-      const results = responses.map((res, index) => ({
-        text: savedTexts[index],
-        result: res.data,
-      }));
-      
-      setAnalysisResults(results);
+		try {
+			const analysisPromises = textsToAnalyze.map((textToAnalyze) =>
+				axios.post('http://localhost:8000/analyze', { text: textToAnalyze })
+			);
 
-      console.log('Analysis results:', results);
-    } catch (error) {
-      console.error('Error analyzing texts:', error);
-    }
-  };
+			const responses = await Promise.all(analysisPromises);
 
-  return (
-    <div className="enter-text">
-      <h1>Enter Your Text</h1>
-      <p>Write something in the textbox below and save it.</p>
-      <textarea
-        placeholder="Type your text here..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows="5"
-        cols="50"
-      />
-      <br />
-      <button onClick={handleSave}>Save</button>
-      <button onClick={handleAnalyze} disabled={savedTexts.length === 0}>Analyze</button>
+			const results = responses.map((res, index) => ({
+				text: textsToAnalyze[index],
+				result: res.data,
+			}));
 
-      <div className="saved-texts">
-        <h2>Saved Texts:</h2>
-        <ul>
-          {savedTexts.map((saved, index) => (
-            <li key={index}>
-              <strong>Saved text{index + 1}:</strong> {saved}
-            </li>
-          ))}
-        </ul>
-      </div>
+			setAnalysisResults(results);
+			console.log('Analysis results:', results);
+		} catch (error) {
+			console.error('Error analyzing texts:', error);
+		}
+	};
 
-      {analysisResults.length > 0 && (
-        <div className="analysis-results">
-          <h2>Analysis Results:</h2>
-          <ul>
-            {analysisResults.map((result, index) => (
-              <li key={index}>
-                <strong>Text:</strong> {result.text} <br />
-                <strong>Sentiment:</strong> {result.result.sentiment} <br />
-                <strong>Confidence:</strong> {result.result.confidence}%
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+	return (
+		<div className="enter-text">
+			<h1>Enter Your Text</h1>
+			<p>Write something in the textbox below and save it.</p>
+			<textarea
+				placeholder="Type your text here..."
+				value={text}
+				onChange={(e) => setText(e.target.value)}
+				rows="5"
+				cols="50"
+			/>
+			<br />
+			{/* <button onClick={handleSave}>Save</button> */}
+			<button onClick={handleAnalyze} disabled={!text.trim()}>
+				Analyze
+			</button>
+
+			{/* <div className="saved-texts">
+				<h2>Saved Texts:</h2>
+				<ul>
+					{savedTexts.map((saved, index) => (
+						<li key={index}>
+							<strong>Saved text{index + 1}:</strong> {saved}
+						</li>
+					))}
+				</ul>
+			</div> */}
+
+			{analysisResults.length > 0 && (
+				<div className="analysis-results">
+					<h2>Analysis Results:</h2>
+					<ul>
+						{analysisResults.map((result, index) => (
+							<li key={index}>
+								<strong>Text:</strong> {result.text} <br />
+								<strong>Sentiment:</strong> {result.result.sentiment} <br />
+								<strong>Confidence:</strong> {result.result.confidence}%
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+		</div>
+	);
 }
 
 export default EnterText;
