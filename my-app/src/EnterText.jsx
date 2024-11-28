@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import axios from 'axios';
 import './EnterText.css';
 
 function EnterText() {
   const [text, setText] = useState(''); // For current input
   const [savedTexts, setSavedTexts] = useState([]); // For saved entries
+  const [analysisResults, setAnalysisResults] = useState([]); // For storing analysis results
 
   const handleSave = () => {
     if (text.trim()) {
@@ -11,6 +13,28 @@ function EnterText() {
       setSavedTexts((prev) => [...prev, text]);
       console.log(`Saved text${savedTexts.length + 1}:`, text); // Log with dynamic variable name
       setText(''); // Clear the textbox after saving
+    }
+  };
+
+  const handleAnalyze = async () => {
+    try {
+      const analysisPromises = savedTexts.map((savedText) =>
+        axios.post('http://localhost:8000/analyze', { text: savedText })
+      );
+
+      const responses = await Promise.all(analysisPromises);
+
+      // Collect and set the analysis results
+      const results = responses.map((res, index) => ({
+        text: savedTexts[index],
+        result: res.data,
+      }));
+      
+      setAnalysisResults(results);
+
+      console.log('Analysis results:', results);
+    } catch (error) {
+      console.error('Error analyzing texts:', error);
     }
   };
 
@@ -27,6 +51,8 @@ function EnterText() {
       />
       <br />
       <button onClick={handleSave}>Save</button>
+      <button onClick={handleAnalyze} disabled={savedTexts.length === 0}>Analyze</button>
+
       <div className="saved-texts">
         <h2>Saved Texts:</h2>
         <ul>
@@ -37,6 +63,21 @@ function EnterText() {
           ))}
         </ul>
       </div>
+
+      {analysisResults.length > 0 && (
+        <div className="analysis-results">
+          <h2>Analysis Results:</h2>
+          <ul>
+            {analysisResults.map((result, index) => (
+              <li key={index}>
+                <strong>Text:</strong> {result.text} <br />
+                <strong>Sentiment:</strong> {result.result.sentiment} <br />
+                <strong>Confidence:</strong> {result.result.confidence}%
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
