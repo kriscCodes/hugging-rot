@@ -1,7 +1,13 @@
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from python import SentimentAnalyzer
+from sentiment_analyzer import SentimentAnalyzer  # Import the sentiment analyzer
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI()
 
@@ -14,12 +20,48 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Initialize model
-analyzer = SentimentAnalyzer()
+# Configure Gemini API
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise ValueError("GEMINI_API_KEY is not set in the environment.")
+genai.configure(api_key=api_key)
+
+# Create the model
+generation_config = {
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 8192,
+    "response_mime_type": "text/plain",
+}
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash-8b",
+    generation_config=generation_config,
+)
 
 class TextInput(BaseModel):
     text: str
 
+class ChatInput(BaseModel):
+    message: str
+
+# Initialize the sentiment analyzer
+sentiment_analyzer = SentimentAnalyzer()
+
 @app.post("/analyze")
 async def analyze_sentiment(input_data: TextInput):
-    return analyzer.analyze(input_data.text)
+    sentiment_result = sentiment_analyzer.analyze(input_data.text)
+    return sentiment_result
+
+@app.post("/chat")
+async def chat(input_data: ChatInput):
+    response = model.generate_content([
+        f"input: {input_data.message}",
+        "output: ",
+    ])
+    sentiment_result = sentiment_analyzer.analyze(input_data.message)
+    return {
+        "reply": response.text,
+        "sentiment": sentiment_result
+    }

@@ -1,0 +1,28 @@
+.chatbot {
+  border: 1px solid #ccc;
+  padding: 1rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.messages {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.message {
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-radius: 5px;
+}
+
+.message.user {
+  background-color: #61dafb;
+  text-align: right;
+}
+
+.message.bot {
+  background-color: #e0e0e0;
+  text-align: left;
+}
