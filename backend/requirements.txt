@@ -1,0 +1,8 @@
+torch
+transformers
+fastapi
+uvicorn
+accelerate>=0.26.0
+cors
+python-dotenv
+google-generativeai
