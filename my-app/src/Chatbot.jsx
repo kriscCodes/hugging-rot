@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './Chatbot.css';
 
 function Chatbot() {
+  const location = useLocation();
+  const initialMessages = location.state?.savedTexts || [];
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+
+  useEffect(() => {
+    if (initialMessages.length > 0) {
+      const initialChatMessages = initialMessages.map(text => ({ sender: 'user', text }));
+      setMessages(initialChatMessages);
+    }
+  }, [initialMessages]);
 
   const handleSend = async () => {
     if (input.trim()) {
@@ -18,7 +28,6 @@ function Chatbot() {
 
         setMessages([...messages, userMessage, botMessage]);
 
-        // Optionally, you can display the sentiment analysis result
         console.log('Sentiment:', sentiment);
       } catch (error) {
         console.error('Error sending message:', error);
