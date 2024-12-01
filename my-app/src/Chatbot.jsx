@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './Chatbot.css';
@@ -8,27 +8,52 @@ function Chatbot() {
   const initialMessages = location.state?.savedTexts || [];
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const hasAnalyzed = useRef(false);
 
   useEffect(() => {
-    if (initialMessages.length > 0) {
-      const initialChatMessages = initialMessages.map(text => ({ sender: 'user', text }));
-      setMessages(initialChatMessages);
+    if (initialMessages.length > 0 && !hasAnalyzed.current) {
+      hasAnalyzed.current = true;
+      const analyzeMessages = async () => {
+        const allMessages = [];
+
+        for (const text of initialMessages) {
+          const userMessage = { sender: 'user', text };
+          allMessages.push(userMessage);
+
+          try {
+            const response = await axios.post('http://localhost:8000/chat', {
+              message: text,
+              history: allMessages,
+            });
+            const botMessage = { sender: 'bot', text: response.data.reply };
+            allMessages.push(botMessage);
+          } catch (error) {
+            console.error('Error analyzing message:', error);
+          }
+        }
+
+        setMessages(allMessages);
+      };
+
+      analyzeMessages();
     }
   }, [initialMessages]);
 
   const handleSend = async () => {
     if (input.trim()) {
       const userMessage = { sender: 'user', text: input };
-      setMessages([...messages, userMessage]);
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
 
       try {
-        const response = await axios.post('http://localhost:8000/chat', { message: input });
+        const response = await axios.post('http://localhost:8000/chat', { 
+          message: input,
+          history: messages
+        });
         const botMessage = { sender: 'bot', text: response.data.reply };
-        const sentiment = response.data.sentiment;
-
-        setMessages([...messages, userMessage, botMessage]);
-
-        console.log('Sentiment:', sentiment);
+        
+        setMessages([...updatedMessages, botMessage]);
+        console.log('Sentiment:', response.data.sentiment);
       } catch (error) {
         console.error('Error sending message:', error);
       }
